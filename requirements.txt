@@ -1,0 +1,8 @@
+opencv-python
+numpy
+ultralytics
+supervision
+fastapi
+uvicorn
+websockets
+pyyaml

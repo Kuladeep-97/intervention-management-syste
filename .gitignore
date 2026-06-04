@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+venv/
+.env
+
+# Node / Frontend
+node_modules/
+frontend/node_modules/
+frontend/dist/
+dist/
+
+# Large Files & Media
+*.pt
+best.pt
+*.mp4
+*.avi
+*.mkv
+*.tar.gz
+*.zip
+input_stream/
+
+# OS/System Files
+.DS_Store
+*:Zone.Identifier
+
+# IDEs
+.vscode/
+.idea/

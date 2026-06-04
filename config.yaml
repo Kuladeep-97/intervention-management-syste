@@ -1,0 +1,43 @@
+detection:
+  ema_beta: 0.2
+  history_size: 25
+  min_motion_votes: 10
+  resize_factor: 0.5
+  ssim_threshold: 0.08
+events:
+  cooldown_frames: 15
+  min_active_frames: 5
+  min_intervention_duration_sec: 2
+limits:
+  max_intervention_count: 20
+  max_total_duration_sec: 300
+output:
+  directory: output
+  save_snapshots: true
+  snapshot_format: jpg
+  snapshot_quality: 90
+rois:
+- axes:
+  - 27
+  - 87
+  center:
+  - 1337
+  - 287
+  radius: 87
+  shape: ellipse
+- axes:
+  - 23
+  - 62
+  center:
+  - 1415
+  - 324
+  radius: 62
+  shape: ellipse
+- axes:
+  - 38
+  - 134
+  center:
+  - 1481
+  - 434
+  radius: 134
+  shape: ellipse
