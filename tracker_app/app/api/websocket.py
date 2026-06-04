@@ -118,38 +118,90 @@ def get_events():
         
     return events
 
-@router.get("/api/summary")
-def get_summary():
+def get_metrics_data():
     if not streamer or not streamer.processor:
-        return {
-            "total_events": 0,
-            "total_duration_sec": 0,
-            "avg_duration_sec": 0,
-            "frequency_per_min": 0,
-            "count_usage_pct": 0,
-            "duration_usage_pct": 0,
-            "max_count": 20,
-            "max_duration_sec": 300,
-            "port_stats": {},
-            "has_deviations": False,
-            "deviation_count": 0,
-            "video_duration_sec": 0
-        }
+        return {"total_events": 0, "total_duration": 0, "port_stats": {}, "deviations": []}
         
     metrics = streamer.processor.metrics
+    total_events = metrics.get("in_count", 0)
+    
+    total_duration = 0
+    port_stats = {}
+    
+    all_sessions = list(streamer.processor.completed_sessions) + list(streamer.processor.active_sessions.values())
+    for session in all_sessions:
+        dur = session.get("total_duration", 0)
+        total_duration += dur
+        roi = session.get("port_name", "unknown")
+        if roi not in port_stats:
+            port_stats[roi] = {"count": 0, "total_duration_sec": 0}
+        port_stats[roi]["count"] += 1
+        port_stats[roi]["total_duration_sec"] += dur
+        
+    # Round duration in port stats
+    for p in port_stats.values():
+        p["total_duration_sec"] = round(p["total_duration_sec"], 2)
+        
+    deviations = []
+    if total_events > 20:
+        deviations.append({
+            "type": "COUNT_LIMIT",
+            "message": f"Interventions ({total_events}) exceeded limit of 20",
+            "current_value": total_events,
+            "limit": 20,
+            "severity": "HIGH",
+            "detected_at": "Active Session",
+            "trigger_event": total_events,
+            "trigger_time": "N/A"
+        })
+    if total_duration > 300:
+        deviations.append({
+            "type": "DURATION_LIMIT",
+            "message": f"Duration ({round(total_duration, 1)}s) exceeded limit of 300s",
+            "current_value": round(total_duration, 1),
+            "limit": 300,
+            "severity": "HIGH",
+            "detected_at": "Active Session",
+            "trigger_event": total_events,
+            "trigger_time": "N/A"
+        })
+        
     return {
-        "total_events": metrics.get("in_count", 0),
-        "total_duration_sec": 0,
-        "avg_duration_sec": 0,
-        "frequency_per_min": 0,
-        "count_usage_pct": (metrics.get("in_count", 0) / 20) * 100,
-        "duration_usage_pct": 0,
+        "total_events": total_events,
+        "total_duration": total_duration,
+        "port_stats": port_stats,
+        "deviations": deviations
+    }
+
+@router.get("/api/summary")
+def get_summary():
+    data = get_metrics_data()
+    total_events = data["total_events"]
+    total_duration = data["total_duration"]
+    port_stats = data["port_stats"]
+    deviations = data["deviations"]
+    
+    avg_duration = total_duration / total_events if total_events > 0 else 0
+    
+    video_sec = (streamer.processor.frame_count / streamer.source.fps) if streamer and streamer.source and streamer.source.fps > 0 else 1
+    video_min = max(video_sec / 60.0, 0.01) 
+    frequency = total_events / video_min
+    
+    duration_usage_pct = (total_duration / 300) * 100
+    
+    return {
+        "total_events": total_events,
+        "total_duration_sec": round(total_duration, 2),
+        "avg_duration_sec": round(avg_duration, 2),
+        "frequency_per_min": round(frequency, 2),
+        "count_usage_pct": round((total_events / 20) * 100, 2),
+        "duration_usage_pct": round(duration_usage_pct, 2),
         "max_count": 20,
         "max_duration_sec": 300,
-        "port_stats": {},
-        "has_deviations": False,
-        "deviation_count": 0,
-        "video_duration_sec": 0
+        "port_stats": port_stats,
+        "has_deviations": len(deviations) > 0,
+        "deviation_count": len(deviations),
+        "video_duration_sec": round(video_sec, 2)
     }
 
 @router.get("/api/clips")
@@ -158,7 +210,7 @@ def get_clips():
 
 @router.get("/api/deviations")
 def get_deviations():
-    return []
+    return get_metrics_data()["deviations"]
 
 @router.get("/api/stream/status")
 def get_stream_status():

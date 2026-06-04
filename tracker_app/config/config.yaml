@@ -1,6 +1,6 @@
 source:
   type: video
-  path: /home/dmin/IMS/input_stream/test_video.avi
+  path: /home/dmin/IMS/input_stream/input.mp4
 
 # Placeholder for future RTSP camera
 # source:
