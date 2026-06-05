@@ -13,13 +13,9 @@ frontend/dist/
 dist/
 
 # Large Files & Media
-*.pt
-best.pt
 *.mp4
 *.avi
 *.mkv
-*.tar.gz
-*.zip
 input_stream/
 
 # OS/System Files
