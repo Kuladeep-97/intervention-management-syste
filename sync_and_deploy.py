@@ -113,19 +113,27 @@ def main():
         
     print("\n--- Triggering remote extraction and host orchestration ---")
     setup_commands = (
-        # Install unzip if needed
-        f"sudo apt-get update -y && sudo apt-get install -y unzip && "
+        # Install unzip and docker if needed
+        f"sudo apt-get update -y && sudo apt-get install -y unzip docker.io && "
         # Back up any existing .mp4 files so redeploys don't wipe the video
         f"mkdir -p /home/ubuntu/_ims_video_backup && "
-        f"find /home/ubuntu/Videoanalytics -maxdepth 1 -name '*.mp4' -exec cp {{}} /home/ubuntu/_ims_video_backup/ \\; 2>/dev/null || true && "
+        f"find /home/ubuntu/Videoanalytics -maxdepth 2 -name '*.mp4' -exec cp {{}} /home/ubuntu/_ims_video_backup/ \\; 2>/dev/null || true && "
         # Wipe old code and extract fresh codebase
         f"rm -rf /home/ubuntu/Videoanalytics && "
         f"mkdir -p /home/ubuntu/Videoanalytics && "
         f"unzip -o /home/ubuntu/project.zip -d /home/ubuntu/Videoanalytics/ && "
-        # Restore backed-up video files
-        f"cp /home/ubuntu/_ims_video_backup/*.mp4 /home/ubuntu/Videoanalytics/ 2>/dev/null || true && "
-        f"chmod +x /home/ubuntu/Videoanalytics/deployment/setup_host.sh && "
-        f"/home/ubuntu/Videoanalytics/deployment/setup_host.sh"
+        # Restore backed-up video files (assume input_stream folder)
+        f"mkdir -p /home/ubuntu/Videoanalytics/input_stream && "
+        f"cp /home/ubuntu/_ims_video_backup/*.mp4 /home/ubuntu/Videoanalytics/input_stream/ 2>/dev/null || true && "
+        # Create output directory explicitly
+        f"mkdir -p /home/ubuntu/Videoanalytics/output && "
+        # Stop existing containers if any
+        f"sudo docker stop ims-pipeline-container 2>/dev/null || true && "
+        f"sudo docker rm ims-pipeline-container 2>/dev/null || true && "
+        # Build and Run Docker Container
+        f"cd /home/ubuntu/Videoanalytics && "
+        f"sudo docker build -t ims-pipeline . && "
+        f"sudo docker run -d --name ims-pipeline-container -p 80:8000 -v /home/ubuntu/Videoanalytics/output:/app/output ims-pipeline"
     )
     
     ssh_cmd = [

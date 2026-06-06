@@ -143,11 +143,8 @@ def main():
     # Handle windows escaping for key path
     clean_key_path = private_key_path.replace("\\", "/")
     
-    print("\nCOMMAND 1: Sync Codebase to Remote Server")
-    print(f'scp -i "{clean_key_path}" -o StrictHostKeyChecking=no -r ./* ubuntu@{public_ip}:/home/ubuntu/Videoanalytics/')
-    
-    print("\nCOMMAND 2: Execute Automated Deployment Script")
-    print(f'ssh -i "{clean_key_path}" -o StrictHostKeyChecking=no ubuntu@{public_ip} "chmod +x /home/ubuntu/Videoanalytics/deployment/setup_host.sh && /home/ubuntu/Videoanalytics/deployment/setup_host.sh"')
+    print("\nCOMMAND 1: Execute Automated Deployment Script")
+    print(f'python sync_and_deploy.py')
     
     print("\nAfter execution, open your browser and navigate to:")
     print(f"http://{public_ip}/")
