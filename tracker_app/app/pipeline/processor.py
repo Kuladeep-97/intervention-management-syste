@@ -58,6 +58,32 @@ class PipelineProcessor:
         
         self.frame_count = 0
         self.metrics = {"in_count": 0, "out_count": 0, "active_objects": 0}
+        self.global_event_id = 0
+        
+        self.output_dir = "output"
+        self.clips_dir = os.path.join(self.output_dir, "clips")
+        self.snapshots_dir = os.path.join(self.output_dir, "snapshots")
+        os.makedirs(self.clips_dir, exist_ok=True)
+        os.makedirs(self.snapshots_dir, exist_ok=True)
+        self.video_writers = {}
+        
+    def reset(self):
+        """Resets the pipeline state to clear old session data."""
+        self.next_glove_id = 1
+        self.tracked_gloves = {}
+        self.glove_motion_state = {}
+        for writer in self.video_writers.values():
+            writer.release()
+        self.video_writers = {}
+        self.active_sessions = {}
+        self.intervention_counters = {}
+        self.completed_sessions = []
+        self.port_polygon_history = {}
+        self.frame_count = 0
+        self.metrics = {"in_count": 0, "out_count": 0, "active_objects": 0}
+        self.global_event_id = 0
+        if hasattr(self, 'last_results'):
+            del self.last_results
 
     def compute_port_masks(self, width, height):
         self.fixed_port_masks = {}
@@ -222,6 +248,9 @@ class PipelineProcessor:
                             self.completed_sessions.insert(0, session)
                             self.metrics["out_count"] += 1
                         ended_ports.append(session_port)
+                        if session_port in self.video_writers:
+                            self.video_writers[session_port].release()
+                            del self.video_writers[session_port]
                     else:
                         session["active_duration"] += (timestamp - session["last_timestamp"])
                         session["last_timestamp"] = timestamp 
@@ -253,7 +282,11 @@ class PipelineProcessor:
                     self.intervention_counters[port_name] = self.intervention_counters.get(port_name, 0) + 1
                     inv_num = self.intervention_counters[port_name]
                     g_id_str = port_name.split('_')[-1]
+                    self.global_event_id += 1
+                    event_id = self.global_event_id
+                    
                     self.active_sessions[port_name] = {
+                        "event_id": event_id,
                         "port_name": port_name,
                         "glove_id": g_id_str,
                         "start_time": timestamp,
@@ -262,9 +295,18 @@ class PipelineProcessor:
                         "active_duration": 0.0,
                         "idle_duration": 0.0,
                         "total_duration": 0.0,
-                        "intervention_num": inv_num
+                        "intervention_num": inv_num,
+                        "snapshot_path": f"output/snapshots/event_{event_id}.jpg",
+                        "clip_path": f"output/clips/event_{event_id}.webm",
+                        "snapshot_taken": False
                     }
                     self.metrics["in_count"] += 1
+                    
+                    fourcc = cv2.VideoWriter_fourcc(*'vp80')
+                    self.video_writers[port_name] = cv2.VideoWriter(
+                        os.path.join(self.clips_dir, f"event_{event_id}.webm"),
+                        fourcc, 15.0, (width, height)
+                    )
 
             active_ports_only = {p for p, g in current_active_gloves}
             static_ports_only = {p for p, g in current_static_gloves}
@@ -335,6 +377,13 @@ class PipelineProcessor:
                 else:
                     cv2.polylines(main_feed, [port_poly], True, (150, 150, 150), 1)
                     cv2.putText(main_feed, port_name, (pcx - 20, pcy), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (150, 150, 150), 1)
+
+            for port_name, writer in self.video_writers.items():
+                writer.write(main_feed)
+                session = self.active_sessions.get(port_name)
+                if session and not session.get("snapshot_taken") and session["total_duration"] > 0.5:
+                    cv2.imwrite(session["snapshot_path"], main_feed)
+                    session["snapshot_taken"] = True
 
             self.frame_count += 1
             self.metrics["active_objects"] = len(self.tracked_gloves)

@@ -37,6 +37,16 @@ ws_module.streamer = streamer
 # Include routers
 app.include_router(ws_module.router)
 
+# Mount the output directory for clips and snapshots
+output_path = os.path.join(os.path.dirname(__file__), "..", "output")
+os.makedirs(output_path, exist_ok=True)
+app.mount("/output", StaticFiles(directory=output_path), name="output")
+
+# Mount snapshots specifically to /api/snapshots to match frontend expectation
+snapshots_path = os.path.join(output_path, "snapshots")
+os.makedirs(snapshots_path, exist_ok=True)
+app.mount("/api/snapshots", StaticFiles(directory=snapshots_path), name="snapshots")
+
 # Mount the dashboard static files at the root
 dashboard_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
 if os.path.exists(dashboard_path):

@@ -25,3 +25,7 @@ input_stream/
 # IDEs
 .vscode/
 .idea/
+
+# Application Data
+output/
+test.webm

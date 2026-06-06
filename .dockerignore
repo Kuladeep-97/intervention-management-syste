@@ -1,0 +1,13 @@
+node_modules/
+frontend/node_modules/
+__pycache__/
+*.pyc
+*.pyo
+.git/
+.gitignore
+.vscode/
+.DS_Store
+*.zip
+*.tar.gz
+output/
+test.webm

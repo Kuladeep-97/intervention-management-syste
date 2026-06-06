@@ -38,13 +38,13 @@ class Streamer:
         if not self.is_streaming:
             self.start_streaming()
 
-    def disconnect(self, websocket: WebSocket):
+    def disconnect(self, websocket: WebSocket, code: int = 1000):
         if websocket in self.active_connections:
             self.active_connections.remove(websocket)
-            print(f"Client disconnected. Total clients: {len(self.active_connections)}")
+            print(f"Client disconnected (code {code}). Total clients: {len(self.active_connections)}")
             
         if len(self.active_connections) == 0 and self.is_streaming:
-            self.stop_streaming()
+            self.stop_streaming(code=code)
 
     def start_streaming(self):
         print("Starting video stream...")
@@ -68,7 +68,7 @@ class Streamer:
         # Start background task
         self.streaming_task = asyncio.create_task(self._stream_loop())
 
-    def stop_streaming(self):
+    def stop_streaming(self, code: int = 1000):
         print("Stopping video stream due to no clients...")
         self.is_streaming = False
         if self.streaming_task:
@@ -76,8 +76,10 @@ class Streamer:
         if self.source:
             self.source.release()
             self.source = None
-        # Do not set self.processor to None so it can be reused without reloading PyTorch
-        # self.processor = None
+            
+        if code not in (1000, 1005) and self.processor:
+            print(f"Clearing cache due to disconnect code {code}")
+            self.processor.reset()
 
     async def _stream_loop(self):
         try:

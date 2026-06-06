@@ -4,7 +4,7 @@ import { Stage } from '../App';
 import { AlertTriangle, Play, Save, X } from 'lucide-react';
 import { 
   fetchEvents, fetchSummary, fetchClips, fetchDeviations, saveClassifications,
-  clipUrl, snapshotUrl, VIDEO_FEED_URL,
+  clipUrl, snapshotUrl, VIDEO_FEED_URL, resetStream,
   InterventionEvent, Summary, ClipInfo, Deviation, PortStat
 } from '../api';
 
@@ -22,6 +22,11 @@ export function Dashboard({ product, batch, onNavigate }: { product: string | nu
   const [clips, setClips] = useState<ClipInfo[]>([]);
   const [deviations, setDeviations] = useState<Deviation[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
+
+  useEffect(() => {
+    // Reset backend cache when dashboard is freshly loaded/refreshed
+    resetStream().catch(() => {});
+  }, []);
 
   const loadData = async () => {
     try {

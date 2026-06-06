@@ -142,6 +142,12 @@ export async function stopStream(): Promise<void> {
   });
 }
 
+export async function resetStream(): Promise<void> {
+  await fetch(`${API_BASE}/stream/reset`, {
+    method: 'POST',
+  });
+}
+
 export async function fetchStreamStatus(): Promise<StreamStatus> {
   const res = await fetch(`${API_BASE}/stream/status`);
   return res.json();

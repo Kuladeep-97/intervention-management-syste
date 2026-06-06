@@ -34,7 +34,9 @@ export default function App() {
         batch={selectedBatch} 
       />
       <main className="flex-1 overflow-auto p-6">
-        {currentStage === 'dashboard' && <Dashboard product={selectedProduct} batch={selectedBatch} onNavigate={setCurrentStage} />}
+        <div className={currentStage === 'dashboard' ? 'block' : 'hidden'}>
+          <Dashboard product={selectedProduct} batch={selectedBatch} onNavigate={setCurrentStage} />
+        </div>
         {currentStage === 'admin' && <AdminSettings product={selectedProduct} />}
         {currentStage === 'analytics' && <Analytics product={selectedProduct} batch={selectedBatch} onNavigate={setCurrentStage} />}
         {currentStage === 'room_occupancy' && <RoomOccupancy />}

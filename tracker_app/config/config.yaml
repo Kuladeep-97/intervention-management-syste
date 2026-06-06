@@ -1,6 +1,6 @@
 source:
   type: video
-  path: /home/dmin/IMS/input_stream/input.mp4
+  path: ./input_stream/input.mp4
 
 # Placeholder for future RTSP camera
 # source:
@@ -8,8 +8,8 @@ source:
 #   url: rtsp://camera/live
 
 pipeline:
-  model_path: /home/dmin/IMS/best.pt
-  ports_json: /home/dmin/IMS/ports.json
+  model_path: ./best.pt
+  ports_json: ./ports.json
   
 server:
   host: 0.0.0.0

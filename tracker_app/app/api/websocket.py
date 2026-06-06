@@ -21,8 +21,8 @@ async def websocket_endpoint(websocket: WebSocket):
             data = await websocket.receive_text()
             # We don't really expect data from the dashboard right now, 
             # but we need to receive to detect disconnects gracefully
-    except WebSocketDisconnect:
-        streamer.disconnect(websocket)
+    except WebSocketDisconnect as e:
+        streamer.disconnect(websocket, code=e.code)
 
 from fastapi.responses import Response
 import csv
@@ -82,7 +82,7 @@ def get_events():
     # Process completed sessions
     for i, session in enumerate(streamer.processor.completed_sessions):
         events.append({
-            "event_id": i + 1,
+            "event_id": session.get("event_id", i + 1),
             "roi_index": 0,
             "roi_label": session.get("port_name", "Unknown"),
             "start_frame": 0,
@@ -93,7 +93,8 @@ def get_events():
             "start_time": f"{session.get('start_time', 0):.1f}s",
             "end_time": f"{session.get('end_time', 0):.1f}s",
             "recorded_at": "",
-            "snapshot_path": "",
+            "snapshot_path": session.get("snapshot_path", ""),
+            "clip_path": session.get("clip_path", ""),
             "intervention_type": "Completed"
         })
         
@@ -101,7 +102,7 @@ def get_events():
     offset = len(streamer.processor.completed_sessions)
     for i, (port, session) in enumerate(streamer.processor.active_sessions.items()):
         events.append({
-            "event_id": offset + i + 1,
+            "event_id": session.get("event_id", offset + i + 1),
             "roi_index": 0,
             "roi_label": port,
             "start_frame": 0,
@@ -112,7 +113,8 @@ def get_events():
             "start_time": f"{session.get('start_time', 0):.1f}s",
             "end_time": "Now",
             "recorded_at": "",
-            "snapshot_path": "",
+            "snapshot_path": session.get("snapshot_path", ""),
+            "clip_path": session.get("clip_path", ""),
             "intervention_type": "In Progress"
         })
         
@@ -204,9 +206,20 @@ def get_summary():
         "video_duration_sec": round(video_sec, 2)
     }
 
+import os
+
 @router.get("/api/clips")
 def get_clips():
-    return []
+    clips = []
+    clips_dir = "output/clips"
+    if os.path.exists(clips_dir):
+        for filename in os.listdir(clips_dir):
+            if filename.endswith(".webm") or filename.endswith(".mp4"):
+                clips.append({
+                    "filename": filename,
+                    "url": f"/output/clips/{filename}"
+                })
+    return clips
 
 @router.get("/api/deviations")
 def get_deviations():
@@ -216,3 +229,9 @@ def get_deviations():
 def get_stream_status():
     is_running = streamer is not None and streamer.is_streaming
     return {"is_running": is_running}
+
+@router.post("/api/stream/reset")
+def reset_stream_endpoint():
+    if streamer and streamer.processor:
+        streamer.processor.reset()
+    return {"status": "ok"}
